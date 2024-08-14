@@ -25,9 +25,11 @@ fn mytest_multiply_by_2(n: i32) -> i32 {
 fn test_xscheduler() {
     let mut s: XScheduler = XScheduler::new();
 
-    s.queue_job(JobParams::new(5, mytest_multiply_by_2));
+    s.queue_job(JobParams::new(5, String::from("/bin/ls"), vec![String::from("/")]));
 
-    s.queue_job(JobParams::new(1, mytest_add_one));
+    s.queue_job(JobParams::new(1, String::from("/bin/ps"), vec![]));
+
+    s.queue_job(JobParams::new(2, String::from("/bin/sleep"), vec![String::from("5")]));
 
     s.run_event_loop();
 }

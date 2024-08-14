@@ -1,4 +1,3 @@
-
 /**
  * In-process job scheduler library.
  *
@@ -11,22 +10,28 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::time::Instant;
 use std::process::Command;
+use std::string::String;
+use std::vec::Vec;
+use std::process::Child;
+use std::io::Result;
 
+// A struct representing a system job (task) to be be run.
 pub struct JobParams {
     // Delay before starting job.
     pub delay_secs: usize,
-    // The job function (given as a function pointer)
-    // TODO: support closures as well.
-    pub job_func: fn(i32) -> i32,
+    // The job command (given as a string)
+    job_cmd: String,
+    job_args: Vec<String>,
 
     time_for_next_run: Instant,
 }
 
 impl JobParams {
-    pub fn new(delay_secs: usize, job_func: fn(i32) -> i32) -> JobParams {
+    pub fn new(delay_secs: usize, job_cmd: String, job_args: Vec<String>) -> JobParams {
         return JobParams {
             delay_secs: delay_secs,
-            job_func: job_func,
+            job_cmd: job_cmd,
+            job_args: job_args,
             time_for_next_run: Instant::now(),
         };
     }
@@ -34,11 +39,16 @@ impl JobParams {
 pub struct XScheduler {
     m_queued_jobs: Vec<JobParams>,
     m_stop_running: bool,
+    m_runnning_jobs: Vec<Child>,
 }
 
 impl XScheduler {
     pub fn new() -> XScheduler {
-        return XScheduler { m_queued_jobs: Vec::new(), m_stop_running: false };
+        return XScheduler {
+            m_queued_jobs: Vec::new(),
+            m_stop_running: false,
+            m_runnning_jobs: vec![],
+        };
     }
 
     pub fn queue_job(&mut self, mut job: JobParams) -> bool {
@@ -50,12 +60,10 @@ impl XScheduler {
         true
     }
 
-    pub fn run_job(&self) -> i32 {
-        let handler = spawn(|| {
-            Command::new("/bin/sleep").arg("5").status().expect("failed to execute process");
-        });
-
-        return 0;
+    pub fn run_job(&self, job: &JobParams) -> Result<Child> {
+        let mut cmd = Command::new(job.job_cmd.clone());
+        cmd.args(job.job_args.clone());
+        cmd.spawn()
     }
 
     pub fn run_event_loop(&mut self) {
@@ -75,13 +83,14 @@ impl XScheduler {
                 // Job is ready for run based on delay.
                 if job.time_for_next_run <= now {
                     println!("{:?}: Starting job", now.duration_since(start_timestamp));
-                    //let res = (job.job_func)(3);
-                    let res: i32 = self.run_job();
+                    let res: Result<Child> = self.run_job(job);
+                    let child = res.expect("command : failed to start!");
                     println!(
-                        "{:?}: Job ran, result: {}",
+                        "{:?}: Job started, pid: {}",
                         Instant::now().duration_since(start_timestamp),
-                        res
+                        child.id()
                     );
+                    self.m_runnning_jobs.push(child);
 
                     // job finished, TODO remove it from queue.
                     self.m_queued_jobs.remove(i);
