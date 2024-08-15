@@ -5,7 +5,7 @@
  * Jobs run in a separate (single) job thread.
  */
 
-use std::thread::spawn;
+use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 use std::time::Instant;
@@ -66,7 +66,7 @@ impl XScheduler {
         cmd.spawn()
     }
 
-    pub fn run_event_loop(&mut self) {
+    pub fn run_event_loop_internal(&mut self) {
         let start_timestamp = Instant::now();
         loop {
             // sleep interval between cycles
