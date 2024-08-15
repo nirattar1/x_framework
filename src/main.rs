@@ -9,8 +9,9 @@ mod xscheduler;
 use xstring::XString;
 use xfile::XFile;
 use xscheduler::{ JobParams, XScheduler };
-use crate::xscheduler::run_event_loop;
+use crate::xscheduler::start_scheduler_event_loop;
 use std::thread;
+use std::time::Duration;
 
 fn main() {
     test_xscheduler();
@@ -31,7 +32,20 @@ fn test_xscheduler() {
 
     // s.queue_job(JobParams::new(1, String::from("/bin/sleep"), vec![String::from("10")]));
 
-    run_event_loop();
+    let (handle, scheduler_ptr) = start_scheduler_event_loop();
+
+    scheduler_ptr.queue_job(JobParams::new(5, String::from("/bin/ls"), vec![String::from("/")]));
+
+    scheduler_ptr.queue_job(JobParams::new(1, String::from("/bin/ps"), vec![]));
+
+    scheduler_ptr.queue_job(JobParams::new(1, String::from("/bin/sleep"), vec![String::from("10")]));
+
+    thread::sleep(Duration::from_millis(2000));
+
+    scheduler_ptr.queue_job(JobParams::new(0, String::from("/bin/ls"), vec![String::from("/home")]));
+
+    handle.join().unwrap();
+
 }
 
 fn test_xfile() {

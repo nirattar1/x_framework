@@ -7,6 +7,7 @@
 
 use std::thread;
 use std::thread::sleep;
+use std::thread::JoinHandle;
 use std::time::Duration;
 use std::time::Instant;
 use std::process::Command;
@@ -39,9 +40,9 @@ impl JobParams {
     }
 }
 pub struct XScheduler {
-    m_queued_jobs: Vec<JobParams>,
+    m_queued_jobs: Mutex<Vec<JobParams>>,
     m_stop_running: bool,
-    m_runnning_jobs: Vec<Child>,
+    m_runnning_jobs: Mutex<Vec<Child>>,
 }
 
 // pub fn run_event_loop() {
@@ -54,45 +55,67 @@ pub struct XScheduler {
 
 static REQUEST_QUEUE: Vec<i32> = vec![];
 
-pub fn run_event_loop() {
-    let mut queue = Arc::new(Mutex::new(REQUEST_QUEUE.clone()));
-    println!("created request queue");
-    let child_ptr = queue.clone();
+// pub fn run_event_loop() {
+//     let mut queue = Arc::new(Mutex::new(REQUEST_QUEUE.clone()));
+//     println!("created request queue");
+//     let child_ptr = queue.clone();
+//     let child_thread = thread::spawn(move || {
+//         match child_ptr.lock() {
+//             Ok(mut data) => {
+//                 // here we have exclusive access to the data
+//                 data.push(2);
+//             }
+//             Err(e) => {
+//                 println!("Failed to get a lock: {}", e);
+//             }
+//         }
+//     });
+
+//     thread::sleep(Duration::from_millis(5000));
+
+//     let mut scheduler: XScheduler = XScheduler::new();
+//     scheduler.run_event_loop_internal();
+
+//     child_thread.join().unwrap();
+// }
+
+
+pub fn start_scheduler_event_loop() -> (JoinHandle<()>, Arc<XScheduler>) {
+
+    let scheduler_ptr = Arc::new(XScheduler::new());
+
+    println!("created scheduler");
+    let child_ptr = scheduler_ptr.clone();
     let child_thread = thread::spawn(move || {
-        match child_ptr.lock() {
-            Ok(mut data) => {
-                // here we have exclusive access to the data
-                data.push(2);
-            }
-            Err(e) => {
-                println!("Failed to get a lock: {}", e);
-            }
-        }
+        println!("started child");
+        child_ptr.run_event_loop_internal();
     });
 
-    thread::sleep(Duration::from_millis(5000));
+    thread::sleep(Duration::from_millis(500));
 
-    let mut scheduler: XScheduler = XScheduler::new();
-    scheduler.run_event_loop_internal();
-
-    child_thread.join().unwrap();
+    return (child_thread, scheduler_ptr);
 }
+
 
 impl XScheduler {
     pub fn new() -> XScheduler {
         return XScheduler {
-            m_queued_jobs: Vec::new(),
+            m_queued_jobs: Mutex::new(Vec::new()),
             m_stop_running: false,
-            m_runnning_jobs: vec![],
+            m_runnning_jobs: Mutex::new(vec![]),
         };
     }
 
-    pub fn queue_job(&mut self, mut job: JobParams) -> bool {
+    pub fn queue_job(&self, mut job: JobParams) -> bool {
         // define time for next run of job (based on now + delay)
         job.time_for_next_run = Instant::now()
             .checked_add(Duration::new(job.delay_secs as u64, 0))
             .unwrap();
-        self.m_queued_jobs.push(job);
+
+            println!("{:?}: queued job", &job.job_cmd);
+
+            self.m_queued_jobs.lock().unwrap().push(job);
+
         true
     }
 
@@ -102,7 +125,7 @@ impl XScheduler {
         cmd.spawn()
     }
 
-    pub fn run_event_loop_internal(&mut self) {
+    pub fn run_event_loop_internal(& self) {
         let start_timestamp = Instant::now();
         println!("started run_event_loop_internal");
 
@@ -112,8 +135,9 @@ impl XScheduler {
 
             // evaluate ready jobs
             let mut i: usize = 0;
-            while i < self.m_queued_jobs.len() {
-                let job: &JobParams = &self.m_queued_jobs[i];
+            let mut queue = self.m_queued_jobs.lock().unwrap();
+            while i < queue.len() {
+                let job: &JobParams = &queue[i];
 
                 println!("iterating job");
                 let now = Instant::now();
@@ -128,10 +152,10 @@ impl XScheduler {
                         Instant::now().duration_since(start_timestamp),
                         child.id()
                     );
-                    self.m_runnning_jobs.push(child);
+                    self.m_runnning_jobs.lock().unwrap().push(child);
 
                     // job finished, TODO remove it from queue.
-                    self.m_queued_jobs.remove(i);
+                    queue.remove(i);
                     // TODO retry failed jobs.
                 } else {
                     i += 1;
