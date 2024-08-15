@@ -14,6 +14,8 @@ use std::string::String;
 use std::vec::Vec;
 use std::process::Child;
 use std::io::Result;
+use std::sync::Mutex;
+use std::sync::Arc;
 
 // A struct representing a system job (task) to be be run.
 pub struct JobParams {
@@ -42,6 +44,40 @@ pub struct XScheduler {
     m_runnning_jobs: Vec<Child>,
 }
 
+// pub fn run_event_loop() {
+//     let mut s: XScheduler = XScheduler::new();
+
+//     let handle = thread::spawn(move || { s.run_event_loop_internal() });
+
+//     handle.join().unwrap();
+// }
+
+static REQUEST_QUEUE: Vec<i32> = vec![];
+
+pub fn run_event_loop() {
+    let mut queue = Arc::new(Mutex::new(REQUEST_QUEUE.clone()));
+    println!("created request queue");
+    let child_ptr = queue.clone();
+    let child_thread = thread::spawn(move || {
+        match child_ptr.lock() {
+            Ok(mut data) => {
+                // here we have exclusive access to the data
+                data.push(2);
+            }
+            Err(e) => {
+                println!("Failed to get a lock: {}", e);
+            }
+        }
+    });
+
+    thread::sleep(Duration::from_millis(5000));
+
+    let mut scheduler: XScheduler = XScheduler::new();
+    scheduler.run_event_loop_internal();
+
+    child_thread.join().unwrap();
+}
+
 impl XScheduler {
     pub fn new() -> XScheduler {
         return XScheduler {
@@ -68,6 +104,8 @@ impl XScheduler {
 
     pub fn run_event_loop_internal(&mut self) {
         let start_timestamp = Instant::now();
+        println!("started run_event_loop_internal");
+
         loop {
             // sleep interval between cycles
             sleep(Duration::from_millis(100));

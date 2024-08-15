@@ -9,6 +9,7 @@ mod xscheduler;
 use xstring::XString;
 use xfile::XFile;
 use xscheduler::{ JobParams, XScheduler };
+use crate::xscheduler::run_event_loop;
 use std::thread;
 
 fn main() {
@@ -23,16 +24,7 @@ fn mytest_multiply_by_2(n: i32) -> i32 {
     n * 2
 }
 
-pub fn run_event_loop() {
-    let mut s: XScheduler = XScheduler::new();
-
-    thread::spawn(move || {
-        s.run_event_loop_internal()
-    });
-}
-
 fn test_xscheduler() {
-
     // s.queue_job(JobParams::new(5, String::from("/bin/ls"), vec![String::from("/")]));
 
     // s.queue_job(JobParams::new(1, String::from("/bin/ps"), vec![]));

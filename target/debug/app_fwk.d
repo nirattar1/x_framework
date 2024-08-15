@@ -1,1 +1,1 @@
-/home/nirwsl/rust/x_framework/target/debug/app_fwk: /home/nirwsl/rust/x_framework/src/main.rs /home/nirwsl/rust/x_framework/src/xfile.rs /home/nirwsl/rust/x_framework/src/xscheduler.rs /home/nirwsl/rust/x_framework/src/xstring.rs
+/home/nir/projects/x_framework/target/debug/app_fwk: /home/nir/projects/x_framework/src/main.rs /home/nir/projects/x_framework/src/xfile.rs /home/nir/projects/x_framework/src/xscheduler.rs /home/nir/projects/x_framework/src/xstring.rs
