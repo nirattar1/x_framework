@@ -38,28 +38,55 @@ fn test_xscheduler() {
 
     scheduler_ptr.queue_job(JobParams::new(1, String::from("/bin/ps"), vec![]));
 
-    scheduler_ptr.queue_job(JobParams::new(1, String::from("/bin/sleep"), vec![String::from("10")]));
+    scheduler_ptr.queue_job(
+        JobParams::new(1, String::from("/bin/sleep"), vec![String::from("10")])
+    );
 
     thread::sleep(Duration::from_millis(2000));
 
-    scheduler_ptr.queue_job(JobParams::new(0, String::from("/bin/ls"), vec![String::from("/home")]));
+    scheduler_ptr.queue_job(
+        JobParams::new(0, String::from("/bin/ls"), vec![String::from("/home")])
+    );
+
+    thread::sleep(Duration::from_millis(1000));
 
     handle.join().unwrap();
-
 }
 
+#[test]
 fn test_xfile() {
-    println!("{}", XFile::exists(String::from("1.txt")));
+    assert_eq!(true, XFile::exists(String::from("test_files/1.txt")));
 
-    let mut test_vec1: Vec<u8> = Vec::new();
-    let read_result = XFile::read(String::from("1.txt"), 10, &mut test_vec1);
-    println!("read result: {} buffer: {:?}", read_result, &test_vec1);
+    assert_eq!(false, XFile::exists(String::from("test_files/nonexist.txt")));
+
+    let test_data: Vec<u8> = vec![5, 2, 3, 4, 5, 100, 99, 98, 101];
+    assert!(!XFile::write(String::from("test_files/tmp.txt"), &test_data).is_err());
+
+    assert!(XFile::write(String::from("/dev/i"), &test_data).is_err());
+
+    let mut read_output: Vec<u8> = Vec::new();
+    assert!(
+        !XFile::read(String::from("test_files/tmp.txt"), test_data.len(), &mut read_output).is_err()
+    );
+
+    // compare vector to and from.
+    assert_eq!(
+        test_data.len(),
+        read_output
+            .iter()
+            .zip(test_data.iter())
+            .filter(|&(a, b)| { a == b })
+            .count()
+    );
 }
 
+#[test]
 fn test_string() {
     let s1: &str = "dfndnfdf";
     let xs2 = XString::from(s1);
     println!("string: {}, string length: {}", xs2.to_string(), xs2.len());
+    assert_eq!(xs2.to_string(), String::from("dfndnfdf"));
+    assert_eq!(xs2.len(), s1.len());
 
     let xs3 = XString::new();
     println!("string: {}, string length: {}", xs3.to_string(), xs3.len());

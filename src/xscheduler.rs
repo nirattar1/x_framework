@@ -1,3 +1,4 @@
+
 /**
  * In-process job scheduler library.
  *
@@ -40,8 +41,8 @@ impl JobParams {
     }
 }
 pub struct XScheduler {
+    pub m_stop_running: bool,
     m_queued_jobs: Mutex<Vec<JobParams>>,
-    m_stop_running: bool,
     m_runnning_jobs: Mutex<Vec<Child>>,
 }
 
@@ -79,9 +80,7 @@ static REQUEST_QUEUE: Vec<i32> = vec![];
 //     child_thread.join().unwrap();
 // }
 
-
 pub fn start_scheduler_event_loop() -> (JoinHandle<()>, Arc<XScheduler>) {
-
     let scheduler_ptr = Arc::new(XScheduler::new());
 
     println!("created scheduler");
@@ -95,7 +94,6 @@ pub fn start_scheduler_event_loop() -> (JoinHandle<()>, Arc<XScheduler>) {
 
     return (child_thread, scheduler_ptr);
 }
-
 
 impl XScheduler {
     pub fn new() -> XScheduler {
@@ -112,9 +110,9 @@ impl XScheduler {
             .checked_add(Duration::new(job.delay_secs as u64, 0))
             .unwrap();
 
-            println!("{:?}: queued job", &job.job_cmd);
+        println!("{:?}: queued job", &job.job_cmd);
 
-            self.m_queued_jobs.lock().unwrap().push(job);
+        self.m_queued_jobs.lock().unwrap().push(job);
 
         true
     }
@@ -125,7 +123,7 @@ impl XScheduler {
         cmd.spawn()
     }
 
-    pub fn run_event_loop_internal(& self) {
+    pub fn run_event_loop_internal(&self) {
         let start_timestamp = Instant::now();
         println!("started run_event_loop_internal");
 
